@@ -127,6 +127,7 @@ fun RegistrationContent(
         else TopAppBarDefaults.pinnedScrollBehavior()
 
     Scaffold(
+        modifier = modifier,
         topBar = {
             @OptIn(ExperimentalMaterial3Api::class)
             CenterAlignedTopAppBar(
@@ -139,7 +140,7 @@ fun RegistrationContent(
     ) { contentPadding ->
         @OptIn(ExperimentalMaterial3Api::class)
         Column(
-            modifier = modifier
+            modifier = Modifier
                 .fillMaxHeight()
                 .imePadding()
                 .nestedScroll(scrollBehavior.nestedScrollConnection)

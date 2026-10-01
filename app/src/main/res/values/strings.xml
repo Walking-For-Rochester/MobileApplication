@@ -11,6 +11,7 @@
     <string name="sign_in">Sign In</string>
     <string name="forgot_password_question">Forgot Password?</string>
     <string name="new_here_sign_up">New here? Sign up</string>
+    <string name="code_timeout_error">The requested code has timed out, please request a new one</string>
     <string name="unexpected_error">Unexpected error. Please contact app administrator</string>
     <string name="auth_error">Authentication error</string>
     <string name="email_address">Email Address</string>
@@ -19,6 +20,9 @@
     <string name="nickname">Display Name</string>
     <string name="password">Password</string>
     <string name="confirm_password">Confirm Password</string>
+
+    <string name="clear_text">Clear text</string>
+    <string name="error">Error</string>
 
     <string name="toggle_password_visibility">Toggle password visibility</string>
     <string name="show_password">Show password</string>
@@ -29,7 +33,7 @@
     <string name="invalid_date_of_birth">Age must be over 18</string>
     <string name="invalid_password_match">Passwords must match</string>
     <string name="invalid_code">The provided code does not match</string>
-    <string name="password_reset_done">New password is set. Proceed to Sign In</string>
+    <string name="password_reset_done">New password is set. Redirecting to sign-in</string>
     <string name="enter_code_desc">Enter code</string>
     <string name="request_code">Request code</string>
     <string name="verify_code">Verify code</string>
@@ -62,7 +66,7 @@
     <string name="location_permission_rationale">Walking for Rochester uses your precise location to display your position and current route while using the app.</string>
     <string name="notification_permission_title">Notifications</string>
     <string name="notification_permission_rationale">Walking for Rochester uses a notification to show information about your active walk.</string>
-     <string name="accept">Accept</string>
+    <string name="accept">Accept</string>
     <string name="decline">Decline</string>
     <string name="safety_guidelines_dialog">I agree to abide by the guidelines and consent to the waiver.</string>
 

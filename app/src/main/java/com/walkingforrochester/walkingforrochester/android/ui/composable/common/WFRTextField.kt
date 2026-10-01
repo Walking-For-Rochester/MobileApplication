@@ -92,6 +92,10 @@ fun WFRTextField(
                 { ClearTextButton(onClearText = { onValueChange("") }) }
             }
 
+            validationError.isNotBlank() -> {
+                { ErrorIcon() }
+            }
+
             else -> null
         },
         isError = validationError.isNotBlank(),
@@ -164,6 +168,10 @@ fun WFROutlinedTextField(
                 { ClearTextButton(onClearText = { onValueChange("") }) }
             }
 
+            validationError.isNotBlank() -> {
+                { ErrorIcon() }
+            }
+
             else -> null
         },
         isError = validationError.isNotEmpty(),
@@ -178,8 +186,19 @@ private fun ClearTextButton(
     onClearText: () -> Unit
 ) {
     IconButton(onClick = onClearText) {
-        Icon(painterResource(R.drawable.ic_cancel_24dp), contentDescription = null)
+        Icon(
+            painterResource(R.drawable.ic_cancel_24dp),
+            contentDescription = stringResource(R.string.clear_text)
+        )
     }
+}
+
+@Composable
+private fun ErrorIcon() {
+    Icon(
+        painterResource(R.drawable.ic_info_24dp),
+        contentDescription = stringResource(R.string.error)
+    )
 }
 
 @Composable
@@ -202,12 +221,28 @@ private fun PasswordVisibilityButton(
 @PreviewLightDark
 private fun PreviewWFRTextField() {
     WalkingForRochesterTheme {
-        Column(Modifier
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(8.dp)) {
+        Column(
+            Modifier
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(8.dp)
+        ) {
             WFRTextField("Test", onValueChange = {}, labelRes = R.string.first_name)
             Spacer(Modifier.height(4.dp))
+            WFRTextField(
+                "T",
+                onValueChange = {},
+                labelRes = R.string.last_name,
+                validationError = "Required"
+            )
+            Spacer(Modifier.height(4.dp))
             WFROutlinedTextField("", onValueChange = {}, labelRes = R.string.first_name)
+            Spacer(Modifier.height(4.dp))
+            WFROutlinedTextField(
+                "",
+                onValueChange = {},
+                labelRes = R.string.last_name,
+                validationError = "Required"
+            )
             Spacer(Modifier.height(4.dp))
             WFRPasswordField("test", onValueChange = {}, labelRes = R.string.password)
         }

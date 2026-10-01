@@ -77,8 +77,7 @@ fun NavigationHost(
                         LoginDestination.route,
                         clearToRoot = true
                     )
-                },
-                contentPadding = contentPadding
+                }
             )
         }
 

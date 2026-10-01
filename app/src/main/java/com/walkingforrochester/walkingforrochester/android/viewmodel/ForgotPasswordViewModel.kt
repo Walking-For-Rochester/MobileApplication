@@ -1,17 +1,18 @@
 package com.walkingforrochester.walkingforrochester.android.viewmodel
 
 import android.util.Patterns
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.walkingforrochester.walkingforrochester.android.R
 import com.walkingforrochester.walkingforrochester.android.repository.NetworkRepository
 import com.walkingforrochester.walkingforrochester.android.ui.state.ForgotPasswordScreenEvent
+import com.walkingforrochester.walkingforrochester.android.ui.state.ForgotPasswordScreenMode
 import com.walkingforrochester.walkingforrochester.android.ui.state.ForgotPasswordScreenState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -21,71 +22,109 @@ import javax.inject.Inject
 @HiltViewModel
 class ForgotPasswordViewModel @Inject constructor(
     private val networkRepository: NetworkRepository,
+    private val savedState: SavedStateHandle,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(ForgotPasswordScreenState())
+    private val _uiState = MutableStateFlow(
+        ForgotPasswordScreenState(
+            email = savedState[EMAIL_KEY] ?: "",
+            mode = savedState[MODE_KEY] ?: ForgotPasswordScreenMode.RequestEmail
+        )
+    )
     val uiState = _uiState.asStateFlow()
 
-    private val _eventFlow = MutableSharedFlow<ForgotPasswordScreenEvent>(
-        // Using capacity of one to allow exception handler to emit outside of coroutine
-        extraBufferCapacity = 1
-    )
-    val eventFlow = _eventFlow.asSharedFlow()
+    fun resetEvent() {
+        _uiState.update { it.copy(event = ForgotPasswordScreenEvent.None) }
+    }
 
     private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
         Timber.e(throwable, "Unexpected error processing profile")
 
-        if (!_eventFlow.tryEmit(ForgotPasswordScreenEvent.UnexpectedError)) {
-            Timber.w("Failed to report error due to no listener")
-        }
-
-        _uiState.update { it.copy(loading = false) }
-    }
-
-    fun onEmailChange(newEmail: String) {
-        _uiState.update { state ->
-            state.copy(
-                email = newEmail,
-                emailValidationMessageId = 0
+        _uiState.update {
+            it.copy(
+                loading = false,
+                event = ForgotPasswordScreenEvent.UnexpectedError
             )
         }
     }
 
-    fun onCodeChange(newCode: String) {
-        _uiState.update { state ->
-            state.copy(
-                code = newCode.filter { it.isDigit() },
-                codeValidationMessageId = 0
-            )
+
+    fun navigateBackInternally(): Boolean {
+        return when (_uiState.value.mode) {
+            ForgotPasswordScreenMode.RequestEmail -> false
+            else -> {
+                savedState[MODE_KEY] = ForgotPasswordScreenMode.RequestEmail
+                savedState[CODE_KEY] = ""
+                _uiState.update {
+                    it.copy(
+                        mode = ForgotPasswordScreenMode.RequestEmail
+                    )
+                }
+                true
+            }
         }
     }
 
-    fun onPasswordChange(newPassword: String) {
-        _uiState.update { state ->
-            state.copy(
-                password = newPassword.filterNot { it.isWhitespace() },
-                passwordValidationMessageId = 0
-            )
+    fun requestCode(email: String) = viewModelScope.launch(context = exceptionHandler) {
+        if (validateEmail(email)) {
+            _uiState.update {
+                it.copy(
+                    loading = true,
+                    email = email,
+                    emailValidationMessageId = 0
+                )
+            }
+
+            savedState[EMAIL_KEY] = email
+
+            savedState[CODE_KEY] = networkRepository.forgotPassword(email = email)
+
+            // Update mode after network call as exception will prevent screen switch
+            savedState[MODE_KEY] = ForgotPasswordScreenMode.VerifyCode
+
+            _uiState.update { state ->
+                state.copy(
+                    mode = ForgotPasswordScreenMode.VerifyCode,
+                    loading = false
+                )
+            }
         }
     }
 
-    fun onConfirmPasswordChange(newConfirmPassword: String) {
-        _uiState.update { state ->
-            state.copy(
-                confirmPassword = newConfirmPassword.filterNot { it.isWhitespace() },
-                confirmPasswordValidationMessageId = 0
-            )
-        }
-    }
+    fun verifyCode(code: String) = viewModelScope.launch(context = exceptionHandler) {
 
-    fun requestCode() = viewModelScope.launch(context = exceptionHandler) {
-        if (validateEmail()) {
-            _uiState.update { it.copy(loading = true) }
-            with(_uiState.value) {
-                val code = networkRepository.forgotPassword(email = email)
-                _uiState.update { state ->
-                    state.copy(
-                        internalCode = code,
+        _uiState.update { it.copy(loading = true) }
+        delay(timeMillis = 1000)
+
+        val internalCode = savedState[CODE_KEY] ?: ""
+
+        when {
+            internalCode.isBlank() -> {
+                savedState[MODE_KEY] = ForgotPasswordScreenMode.RequestEmail
+                _uiState.update {
+                    it.copy(
+                        mode = ForgotPasswordScreenMode.RequestEmail,
+                        loading = false,
+                        event = ForgotPasswordScreenEvent.CodeTimeout
+                    )
+                }
+            }
+
+            code.isNotEmpty() && code == internalCode -> {
+                savedState[MODE_KEY] = ForgotPasswordScreenMode.UpdatePassword
+                _uiState.update {
+                    it.copy(
+                        mode = ForgotPasswordScreenMode.UpdatePassword,
+                        codeValidationMessageId = 0,
+                        loading = false
+                    )
+                }
+            }
+
+            else -> {
+                _uiState.update {
+                    it.copy(
+                        codeValidationMessageId = R.string.invalid_code,
                         loading = false
                     )
                 }
@@ -93,35 +132,30 @@ class ForgotPasswordViewModel @Inject constructor(
         }
     }
 
-    fun verifyCode() = viewModelScope.launch(context = exceptionHandler) {
-        with(_uiState.value) {
-            if (code.isNotEmpty() && code == internalCode) {
-                _uiState.update { it.copy(codeVerified = true) }
-            } else {
-                _uiState.update { it.copy(codeValidationMessageId = R.string.invalid_code) }
-            }
-        }
-    }
+    fun resetPassword(
+        password: String
+    ) = viewModelScope.launch(context = exceptionHandler) {
 
-    fun resetPassword() = viewModelScope.launch(context = exceptionHandler) {
-        if (validatePassword()) {
+        if (validatePassword(password)) {
             _uiState.update { it.copy(loading = true) }
 
-            with(_uiState.value) {
-                networkRepository.resetPassword(email = email, password = password)
-                _eventFlow.emit(ForgotPasswordScreenEvent.PasswordReset)
-            }
+            networkRepository.resetPassword(email = _uiState.value.email, password = password)
 
-            _uiState.update { it.copy(loading = false) }
+            _uiState.update {
+                it.copy(
+                    loading = false,
+                    password = password,
+                    event = ForgotPasswordScreenEvent.PasswordReset
+                )
+            }
         }
     }
 
-    private fun validateEmail(): Boolean {
+    fun validateEmail(email: String): Boolean {
         var isValid = true
         var emailValidationMessageId = 0
 
-        val state = _uiState.value
-        if (!Patterns.EMAIL_ADDRESS.matcher(state.email).matches()) {
+        if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
             emailValidationMessageId = R.string.invalid_email
             isValid = false
         }
@@ -135,28 +169,39 @@ class ForgotPasswordViewModel @Inject constructor(
         return isValid
     }
 
-    private fun validatePassword(): Boolean {
+    fun resetError() {
+        _uiState.update {
+            it.copy(
+                emailValidationMessageId = 0,
+                codeValidationMessageId = 0,
+                passwordValidationMessageId = 0
+            )
+        }
+    }
+
+    private fun validatePassword(
+        password: String
+    ): Boolean {
         var passwordValidationMessageId = 0
-        var confirmPasswordValidationMessageId = 0
         var isValid = true
 
-        val state = _uiState.value
-
-        if (state.password.length < 8) {
+        val adjustedPassword = password.filterNot { it.isWhitespace() }
+        if (password != adjustedPassword || password.length < 8) {
             passwordValidationMessageId = R.string.invalid_password
-            isValid = false
-        }
-        if (state.password != state.confirmPassword) {
-            confirmPasswordValidationMessageId = R.string.invalid_password_match
             isValid = false
         }
 
         _uiState.update {
             it.copy(
-                passwordValidationMessageId = passwordValidationMessageId,
-                confirmPasswordValidationMessageId = confirmPasswordValidationMessageId
+                passwordValidationMessageId = passwordValidationMessageId
             )
         }
         return isValid
+    }
+
+    companion object {
+        const val EMAIL_KEY = "email"
+        const val MODE_KEY = "mode"
+        const val CODE_KEY = "code"
     }
 }

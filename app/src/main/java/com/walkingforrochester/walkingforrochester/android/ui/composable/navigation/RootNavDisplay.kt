@@ -9,6 +9,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.walkingforrochester.walkingforrochester.android.model.AccountProfile
+import com.walkingforrochester.walkingforrochester.android.ui.composable.forgotpassword.ForgotPasswordScreen
 import com.walkingforrochester.walkingforrochester.android.ui.composable.login.LoginScreen
 import com.walkingforrochester.walkingforrochester.android.ui.composable.registration.RegistrationScreen
 import timber.log.Timber
@@ -58,7 +59,13 @@ fun RootNavDisplay(
                     )
             }
             entry<ForgotPasswordRoute> {
-                Text("This is forgot password")
+                ForgotPasswordScreen(
+                    onNavigateBack = navigateBack,
+                    onPasswordResetComplete = {
+                        backStack.clear()
+                        backStack.add(LoginRoute)
+                    },
+                )
             }
             entry<RegistrationRoute> { registrationRoute ->
                 RegistrationScreen(
