@@ -114,6 +114,7 @@ dependencies {
     implementation(libs.androidx.compose.material3.adaptive)
     implementation(libs.androidx.compose.material3.window.size)
 
+    androidTestImplementation(enforcedPlatform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
@@ -152,10 +153,10 @@ dependencies {
     androidTestImplementation(libs.kotlinx.coroutines.test)
 
     // okhttp
-    val okHttpBom = platform(libs.okhttp.bom)
-    implementation(okHttpBom)
+    implementation(platform(libs.okhttp.bom))
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
+    androidTestImplementation(enforcedPlatform(libs.okhttp.bom))
     androidTestImplementation(libs.okhttp.mockwebserver)
     androidTestImplementation(libs.okhttp.tls)
 
@@ -176,15 +177,11 @@ dependencies {
     // Dagger/Hilt
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     implementation(libs.dagger.hilt.android)
-    ksp(libs.dagger.hilt.compilier)
+    ksp(libs.dagger.hilt.compiler)
     // Needed to keep hilt in sync with kotlin
     ksp(libs.kotlin.metadata.jvm)
 
     androidTestImplementation(libs.dagger.hilt.android.testing)
-    kspAndroidTest(libs.dagger.hilt.compilier)
-
-    testImplementation(libs.dagger.hilt.android.testing)
-    kspTest(libs.dagger.hilt.compilier)
 
     // google service
     implementation(libs.play.services.location)

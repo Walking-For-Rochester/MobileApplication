@@ -110,7 +110,7 @@ androidx-window = { module = "androidx.window:window", version.ref = "androidx-w
 accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanist" }
 dagger-hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "dagger-hilt" }
 dagger-hilt-android-testing = { module = "com.google.dagger:hilt-android-testing", version.ref = "dagger-hilt" }
-dagger-hilt-compilier = { module = "com.google.dagger:hilt-compiler", version.ref = "dagger-hilt" }
+dagger-hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "dagger-hilt" }
 junit = { module = "junit:junit", version.ref = "junit" }
 
 # Kotlin
