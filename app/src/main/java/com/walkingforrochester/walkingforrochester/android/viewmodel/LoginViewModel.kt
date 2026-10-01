@@ -153,15 +153,18 @@ class LoginViewModel @Inject constructor(
     }
 
     fun onEmailAddressValueChange(newEmailAddress: String) {
+        val trimmedEmail = newEmailAddress.trim()
         _uiState.update { state ->
+           var msgId = state.emailAddressValidationMessageId
+            if (msgId != 0 && isEmailValid(trimmedEmail)) {
+                msgId = 0
+            }
             state.copy(
-                emailAddress = newEmailAddress.trim(),
-                emailAddressValidationMessageId = 0,
-                authenticationErrorMessage = "",
-                authenticationErrorMessageId = 0,
+                emailAddress = trimmedEmail,
+                emailAddressValidationMessageId = msgId
             )
         }
-        savedStateHandle[EMAIL_KEY] = newEmailAddress
+        savedStateHandle[EMAIL_KEY] = trimmedEmail
     }
 
     fun onPasswordValueChange(newPassword: String) {
@@ -188,7 +191,7 @@ class LoginViewModel @Inject constructor(
         val localState = _uiState.value
 
         with(localState) {
-            if (!Patterns.EMAIL_ADDRESS.matcher(emailAddress).matches()) {
+            if (!isEmailValid(emailAddress)) {
                 emailAddressValidationMessageId = R.string.invalid_email
                 isValid = false
             }
@@ -207,6 +210,10 @@ class LoginViewModel @Inject constructor(
             )
         }
         return isValid
+    }
+
+    private fun isEmailValid(email: String): Boolean {
+        return Patterns.EMAIL_ADDRESS.matcher(email).matches()
     }
 
     private suspend fun completeLogin(accountId: Long, manualLogin: Boolean = false) {
