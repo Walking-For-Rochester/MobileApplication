@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ButtonDefaults
@@ -35,9 +36,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -207,6 +209,7 @@ fun LoginScreenContent(
             contentScale = ContentScale.Crop
         )
 
+        val maxWidthDp = dimensionResource(R.dimen.max_form_width)
         val keyboardController = LocalSoftwareKeyboardController.current
         val focusManager = LocalFocusManager.current
         val onSubmit: () -> Unit = {
@@ -227,7 +230,9 @@ fun LoginScreenContent(
             SocialLoginButtons(
                 onContinueWithGoogle = onContinueWithGoogle,
                 onContinueWithFacebook = onContinueWithFacebook,
-                modifier = Modifier.padding(top = 20.dp),
+                modifier = Modifier
+                    .padding(top = 20.dp)
+                    .widthIn(max = maxWidthDp),
             )
             Text(
                 modifier = Modifier.padding(16.dp),
@@ -235,6 +240,7 @@ fun LoginScreenContent(
                 color = Color.White,
             )
             LoginForm(
+                modifier = Modifier.widthIn(max = maxWidthDp),
                 loginScreenState = uiState,
                 onEmailAddressValueChange = { newEmailAddress ->
                     onEmailChanged(newEmailAddress)
@@ -258,6 +264,7 @@ fun LoginScreenContent(
             )
             Row(
                 modifier = Modifier
+                    .widthIn(max = maxWidthDp)
                     .fillMaxWidth()
                     .padding(top = 16.dp, bottom = 20.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -288,7 +295,7 @@ fun LoginScreenContent(
     }
 }
 
-@Preview
+@PreviewScreenSizes
 @Composable
 fun PreviewLoginScreen() {
     WalkingForRochesterTheme {

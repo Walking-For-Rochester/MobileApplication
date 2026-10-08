@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
@@ -39,7 +40,10 @@ fun LoginForm(
             onValueChange = { email -> onEmailAddressValueChange(email) },
             labelRes = R.string.email_address,
             modifier = Modifier
-                .background(MaterialTheme.colorScheme.surface)
+                .background(
+                    color = MaterialTheme.colorScheme.surface,
+                    shape = TextFieldDefaults.shape
+                )
                 .semantics { contentType = ContentType.EmailAddress },
             testTag = "login_email",
             keyboardOptions = KeyboardOptions(
@@ -53,7 +57,10 @@ fun LoginForm(
             onValueChange = { password -> onPasswordValueChange(password) },
             labelRes = R.string.password,
             modifier = Modifier
-                .background(MaterialTheme.colorScheme.surface)
+                .background(
+                    color = MaterialTheme.colorScheme.surface,
+                    shape = TextFieldDefaults.shape
+                )
                 .semantics { contentType = ContentType.Password },
             testTag = "login_password",
             keyboardOptions = KeyboardOptions(

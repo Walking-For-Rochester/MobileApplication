@@ -24,7 +24,7 @@ androidx-window = "1.5.1"
 junit = "4.13.2"
 
 # kotlin
-kotlin = "2.4.20"
+kotlin = "2.4.21"
 kotlinx-coroutines-bom = "1.11.0"
 kotlinx-serialization = "1.11.0"
 ksp = "2.3.12"

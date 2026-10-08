@@ -1,5 +1,8 @@
 package com.walkingforrochester.walkingforrochester.android.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class AccountProfile(
     val accountId: Long,
     val email: String,

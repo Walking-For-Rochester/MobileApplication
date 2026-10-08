@@ -4,11 +4,15 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.semantics
@@ -38,6 +42,9 @@ fun RegistrationForm(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        val communityServiceFocusRequester = remember { FocusRequester() }
+        val keyboardController = LocalSoftwareKeyboardController.current
+
         WFRTextField(
             value = registrationProfile.firstName,
             onValueChange = { onProfileChange(registrationProfile.copy(firstName = it)) },
@@ -117,15 +124,22 @@ fun RegistrationForm(
                 .semantics { contentType = ContentType.NewPassword },
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password,
-                imeAction = ImeAction.Done
+                imeAction = ImeAction.Next
+            ),
+            keyboardActions = KeyboardActions(
+                onNext = {
+                    keyboardController?.hide()
+                    communityServiceFocusRequester.requestFocus()
+                }
             ),
             validationError = errorMessage(uiState.confirmPasswordValidationMessageId)
         )
 
         CommunityServiceCheckbox(
+            modifier = Modifier.padding(start = 8.dp, top = 4.dp, end = 8.dp),
             checked = registrationProfile.communityService,
             onCheckedChange = { onProfileChange(registrationProfile.copy(communityService = it)) },
-            modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 8.dp),
+            focusRequester = communityServiceFocusRequester,
         )
     }
 }

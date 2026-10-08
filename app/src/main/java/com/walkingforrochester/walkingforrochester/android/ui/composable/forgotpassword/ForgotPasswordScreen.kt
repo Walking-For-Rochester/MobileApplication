@@ -1,17 +1,19 @@
 package com.walkingforrochester.walkingforrochester.android.ui.composable.forgotpassword
 
 import android.content.res.Configuration
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -44,6 +46,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.semantics
@@ -122,6 +125,11 @@ fun ForgotPasswordScreen(
             }
         }
     }
+
+    BackHandler(enabled = uiState.mode != ForgotPasswordScreenMode.RequestEmail) {
+        forgotPasswordViewModel.navigateBackInternally()
+    }
+
     ForgotPasswordContent(
         uiState = uiState,
         modifier = modifier,
@@ -175,11 +183,11 @@ private fun ForgotPasswordContent(
         @OptIn(ExperimentalMaterial3Api::class)
         Column(
             modifier = Modifier
-                .fillMaxHeight()
+                .fillMaxSize()
                 .imePadding()
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .verticalScroll(rememberScrollState())
-                .padding(top = 8.dp, start = 16.dp, end=16.dp, bottom = 24.dp)
+                .padding(top = 8.dp, start = 16.dp, end = 16.dp, bottom = 24.dp)
                 .padding(contentPadding),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -237,6 +245,7 @@ private fun ColumnScope.RequestCode(
         onRequestCode(email)
     }
 
+    val maxWidthDp = dimensionResource(R.dimen.max_form_width)
     WFRTextField(
         value = email,
         onValueChange = {
@@ -248,7 +257,9 @@ private fun ColumnScope.RequestCode(
             }
         },
         labelRes = R.string.email_address,
-        modifier = Modifier.semantics { contentType = ContentType.EmailAddress },
+        modifier = Modifier
+            .widthIn(max = maxWidthDp)
+            .semantics { contentType = ContentType.EmailAddress },
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Email, imeAction = ImeAction.Done
         ),
@@ -262,6 +273,7 @@ private fun ColumnScope.RequestCode(
     Text(
         text = stringResource(id = R.string.forgot_password_info),
         modifier = Modifier
+            .widthIn(max = maxWidthDp)
             .fillMaxWidth()
             .padding(top = 16.dp, bottom = 8.dp),
         style = MaterialTheme.typography.bodyMedium
@@ -301,14 +313,18 @@ private fun EmailMessage(
     email: String,
     @StringRes msgResId: Int
 ) {
+    val modifier = Modifier
+        .widthIn(max = dimensionResource(R.dimen.max_form_width))
+        .fillMaxWidth()
+
     Text(
         text = email,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
         style = MaterialTheme.typography.titleMedium
     )
     Text(
         text = stringResource(id = msgResId),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
         style = MaterialTheme.typography.bodyMedium
     )
 }
@@ -346,6 +362,7 @@ private fun ColumnScope.VerifyCode(
             onResetError()
         },
         labelRes = R.string.enter_code_desc,
+        modifier = Modifier.widthIn(max = dimensionResource(R.dimen.max_form_width)),
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done
         ),
@@ -412,6 +429,8 @@ private fun ColumnScope.ChangePassword(
     )
     Spacer(modifier = Modifier.height(8.dp))
 
+    val maxWidthDp = dimensionResource(R.dimen.max_form_width)
+
     WFRPasswordField(
         value = password,
         onValueChange = { newPassword ->
@@ -419,7 +438,9 @@ private fun ColumnScope.ChangePassword(
             onResetError()
         },
         labelRes = R.string.password,
-        modifier = Modifier.semantics { contentType = ContentType.NewPassword },
+        modifier = Modifier
+            .widthIn(max = maxWidthDp)
+            .semantics { contentType = ContentType.NewPassword },
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Password, imeAction = ImeAction.Next
         ),
@@ -433,7 +454,9 @@ private fun ColumnScope.ChangePassword(
             confirmErrorMessageId = 0
         },
         labelRes = R.string.confirm_password,
-        modifier = Modifier.semantics { contentType = ContentType.NewPassword },
+        modifier = Modifier
+            .widthIn(max = maxWidthDp)
+            .semantics { contentType = ContentType.NewPassword },
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Password, imeAction = ImeAction.Done
         ),

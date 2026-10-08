@@ -1,7 +1,9 @@
 package com.walkingforrochester.walkingforrochester.android.viewmodel
 
 import android.util.Patterns
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.serialization.saved
 import androidx.lifecycle.viewModelScope
 import com.walkingforrochester.walkingforrochester.android.R
 import com.walkingforrochester.walkingforrochester.android.model.AccountProfile
@@ -21,20 +23,23 @@ import javax.inject.Inject
 @HiltViewModel
 class RegistrationViewModel @Inject constructor(
     private val networkRepository: NetworkRepository,
-    private val preferenceRepository: PreferenceRepository
+    private val preferenceRepository: PreferenceRepository,
+    saveState: SavedStateHandle
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RegistrationScreenState())
     val uiState = _uiState.asStateFlow()
 
-    private val _registrationProfile = MutableStateFlow(AccountProfile.DEFAULT_PROFILE)
+    var savedProfile by saveState.saved(key = PROFILE_KEY) { AccountProfile.DEFAULT_PROFILE }
+    private val _registrationProfile = MutableStateFlow(savedProfile.copy())
     val registrationProfile = _registrationProfile.asStateFlow()
 
-    var prefilledProfile = AccountProfile.DEFAULT_PROFILE
+    var prefilledProfile by saveState.saved(PREFILL_KEY) { AccountProfile.DEFAULT_PROFILE }
     fun prefill(profile: AccountProfile) {
         // Only prefill if supplied profile changes
         if (prefilledProfile != profile) {
             _registrationProfile.update { profile }
+            savedProfile = profile
             prefilledProfile = profile
         }
     }
@@ -54,8 +59,11 @@ class RegistrationViewModel @Inject constructor(
         val currentProfile = _registrationProfile.value
 
         if (profile.email != currentProfile.email) {
-            _uiState.update {
-                it.copy(emailValidationMessageId = 0)
+            // Only clear email error if email is in valid format after initial failure
+            if (validateEmail(profile.email.trim())) {
+                _uiState.update {
+                    it.copy(emailValidationMessageId = 0)
+                }
             }
         }
 
@@ -74,15 +82,19 @@ class RegistrationViewModel @Inject constructor(
                 lastName = profile.lastName.filter { it != '\n' },
                 nickname = profile.nickname.filter { it != '\n' },
                 communityService = profile.communityService
-            )
+            ).also { savedProfile = it }
         }
     }
 
     fun onPasswordChange(newPassword: String) {
         _uiState.update { state ->
+            var messageId = state.passwordValidationMessageId
+            if (messageId != 0 && newPassword.length >= PASSWORD_LENGTH) {
+                messageId = 0
+            }
             state.copy(
                 password = newPassword.filterNot { it.isWhitespace() },
-                passwordValidationMessageId = 0
+                passwordValidationMessageId = messageId
             )
         }
     }
@@ -137,7 +149,7 @@ class RegistrationViewModel @Inject constructor(
                 lastNameValidationMessageId = R.string.invalid_field_empty
                 isValid = false
             }
-            if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            if (!validateEmail(email)) {
                 emailValidationMessageId = R.string.invalid_email
                 isValid = false
             } else if (networkRepository.isEmailInUse(email)) {
@@ -147,7 +159,7 @@ class RegistrationViewModel @Inject constructor(
         }
 
         with(localState) {
-            if (password.length < 8) {
+            if (password.length < PASSWORD_LENGTH) {
                 passwordValidationMessageId = R.string.invalid_password
                 isValid = false
             }
@@ -169,9 +181,18 @@ class RegistrationViewModel @Inject constructor(
         return isValid
     }
 
+    private fun validateEmail(email: String): Boolean {
+        return Patterns.EMAIL_ADDRESS.matcher(email).matches()
+    }
+
     private fun completeRegistration(accountId: Long) = viewModelScope.launch {
         preferenceRepository.updateAccountId(accountId)
         _uiState.update { it.copy(event = RegistrationScreenEvent.RegistrationComplete) }
     }
 
+    companion object {
+        const val PROFILE_KEY = "profile"
+        const val PREFILL_KEY = "prefill"
+        const val PASSWORD_LENGTH = 8
+    }
 }

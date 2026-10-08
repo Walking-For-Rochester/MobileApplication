@@ -4,10 +4,11 @@ import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -28,8 +29,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalAutofillManager
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -141,7 +143,7 @@ fun RegistrationContent(
         @OptIn(ExperimentalMaterial3Api::class)
         Column(
             modifier = Modifier
-                .fillMaxHeight()
+                .fillMaxSize()
                 .imePadding()
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .verticalScroll(rememberScrollState())
@@ -153,6 +155,7 @@ fun RegistrationContent(
             RegistrationForm(
                 uiState = uiState,
                 registrationProfile = registrationProfile,
+                modifier= Modifier.widthIn(max = dimensionResource(R.dimen.max_form_width)),
                 onProfileChange = onProfileChange,
                 onPasswordChange = onPasswordChange,
                 onPasswordConfirmationChange = onPasswordConfirmationChange
@@ -169,7 +172,7 @@ fun RegistrationContent(
     }
 }
 
-@PreviewLightDark
+@PreviewScreenSizes
 @Composable
 fun PreviewRegistrationContent() {
     WalkingForRochesterTheme {

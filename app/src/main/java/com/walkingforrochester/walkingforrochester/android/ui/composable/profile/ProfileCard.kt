@@ -465,13 +465,11 @@ fun EditProfileInfo(
             )
         )
         CommunityServiceCheckbox(
-            modifier = Modifier.padding(start = 12.dp, top = 8.dp, end = 4.dp),
+            modifier = Modifier.padding(start = 8.dp, top = 4.dp, end = 8.dp),
             checked = accountProfile.communityService,
             onCheckedChange = { newValue ->
                 onProfileChange(accountProfile.copy(communityService = newValue))
             },
-            labelColor = MaterialTheme.colorScheme.onSurface,
-            checkmarkColor = MaterialTheme.colorScheme.inverseOnSurface
         )
     }
 }

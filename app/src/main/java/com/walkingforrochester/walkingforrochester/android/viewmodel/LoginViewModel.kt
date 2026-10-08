@@ -156,7 +156,7 @@ class LoginViewModel @Inject constructor(
         val trimmedEmail = newEmailAddress.trim()
         _uiState.update { state ->
            var msgId = state.emailAddressValidationMessageId
-            if (msgId != 0 && isEmailValid(trimmedEmail)) {
+            if (msgId != 0 && validateEmail(trimmedEmail)) {
                 msgId = 0
             }
             state.copy(
@@ -191,7 +191,7 @@ class LoginViewModel @Inject constructor(
         val localState = _uiState.value
 
         with(localState) {
-            if (!isEmailValid(emailAddress)) {
+            if (!validateEmail(emailAddress)) {
                 emailAddressValidationMessageId = R.string.invalid_email
                 isValid = false
             }
@@ -212,7 +212,7 @@ class LoginViewModel @Inject constructor(
         return isValid
     }
 
-    private fun isEmailValid(email: String): Boolean {
+    private fun validateEmail(email: String): Boolean {
         return Patterns.EMAIL_ADDRESS.matcher(email).matches()
     }
 
