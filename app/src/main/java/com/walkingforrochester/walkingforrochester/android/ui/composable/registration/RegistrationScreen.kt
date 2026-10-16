@@ -155,7 +155,7 @@ fun RegistrationContent(
             RegistrationForm(
                 uiState = uiState,
                 registrationProfile = registrationProfile,
-                modifier= Modifier.widthIn(max = dimensionResource(R.dimen.max_form_width)),
+                modifier = Modifier.widthIn(max = dimensionResource(R.dimen.max_form_width)),
                 onProfileChange = onProfileChange,
                 onPasswordChange = onPasswordChange,
                 onPasswordConfirmationChange = onPasswordConfirmationChange

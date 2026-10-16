@@ -44,36 +44,89 @@ data object TakePictureRoute : RootRoute
 // Nav drawer items
 @Serializable
 sealed interface DrawerRoute : RootRoute {
+    @get:StringRes
+    val titleRes: Int
 
-    @Serializable
-    data object SafetyGuidelinesRoute : DrawerRoute
+    @get:DrawableRes
+    val iconRes: Int
 
-    @Serializable
-    data object WaiverRoute : DrawerRoute
+    @get:StringRes
+    val uriTarget: Int
 
-    @Serializable
-    data object SeasonScheduleRoute : DrawerRoute
-
-    @Serializable
-    data object VolunteerRoute : DrawerRoute
-
-    @Serializable
-    data object ReportLitterRoute : DrawerRoute
-
-    @Serializable
-    data object AboutAppRoute : DrawerRoute
-
-    @Serializable
-    data object ContactUsRoute : DrawerRoute
 }
 
+@Serializable
+data object SeasonScheduleRoute : DrawerRoute {
 
-@Composable
-fun rememberRootRouteBackStack(vararg elements: RootRoute): NavBackStack<RootRoute> {
-    return rememberSerializable(serializer = serializer()) {
-        NavBackStack(*elements)
-    }
+    override val titleRes: Int get() = R.string.season_schedule
+    override val iconRes: Int get() = R.drawable.ic_calendar_month_24dp
+    override val uriTarget: Int get() = R.string.season_schedule_url
+
 }
+
+@Serializable
+data object VolunteerRoute : DrawerRoute {
+
+    override val titleRes: Int get() = R.string.volunteer
+    override val iconRes: Int get() = R.drawable.ic_volunteer_activism_24dp
+    override val uriTarget: Int get() = R.string.volunteer_url
+
+}
+
+@Serializable
+data object ReportLitterRoute : DrawerRoute {
+
+    override val titleRes: Int get() = R.string.report_litter
+    override val iconRes: Int get() = R.drawable.ic_delete_24dp
+    override val uriTarget: Int get() = R.string.report_litter_url
+
+}
+
+@Serializable
+data object AboutAppRoute : DrawerRoute {
+
+    override val titleRes: Int get() = R.string.about_app
+    override val iconRes: Int get() = R.drawable.ic_info_24dp
+    override val uriTarget: Int get() = R.string.about_app_url
+
+}
+
+@Serializable
+data object SafetyGuidelinesRoute : DrawerRoute {
+
+    override val titleRes: Int get() = R.string.safety_guidelines
+    override val iconRes: Int get() = R.drawable.ic_health_and_safety_24dp
+    override val uriTarget: Int get() = R.string.guidelines_url
+
+}
+
+@Serializable
+data object WaiverRoute : DrawerRoute {
+
+    override val titleRes: Int get() = R.string.waiver
+    override val iconRes: Int get() = R.drawable.ic_contract_24dp
+    override val uriTarget: Int get() = R.string.waiver_url
+
+}
+
+@Serializable
+data object ContactUsRoute : DrawerRoute {
+
+    override val titleRes: Int get() = R.string.contact_us
+    override val iconRes: Int get() = R.drawable.ic_help_24dp
+    override val uriTarget: Int get() = NO_URI_TARGET
+
+}
+
+val drawerRoutes: List<DrawerRoute> = listOf(
+    SeasonScheduleRoute,
+    VolunteerRoute,
+    ReportLitterRoute,
+    AboutAppRoute,
+    SafetyGuidelinesRoute,
+    WaiverRoute,
+    ContactUsRoute,
+)
 
 /*sealed interface BottomBarRoute : NavKey {
     @Serializable
@@ -84,9 +137,16 @@ fun rememberRootRouteBackStack(vararg elements: RootRoute): NavBackStack<RootRou
 
     @Serializable
     data object NewsFeedRoute : BottomBarRoute
-}
+}*/
 
 @Composable
+fun rememberRootRouteBackStack(vararg elements: RootRoute): NavBackStack<RootRoute> {
+    return rememberSerializable(serializer = serializer()) {
+        NavBackStack(*elements)
+    }
+}
+
+/*@Composable
 fun rememberBottomBarRouteBackStack(vararg elements: BottomBarRoute): NavBackStack<BottomBarRoute> {
     return rememberSerializable(serializer = serializer()) {
         NavBackStack(*elements)
@@ -235,7 +295,7 @@ val ContactUs = Destination(
     route = "contactUs",
     title = R.string.contact_us,
     iconResId = R.drawable.ic_help_24dp,
-    showBackButton = true,
+    showTopBar = false,
     showProfileButton = false,
     showBottomBar = false
 )
@@ -276,3 +336,5 @@ val drawerDestinations = listOf(
     //OurStory,
     ContactUs
 )
+
+const val NO_URI_TARGET = 1

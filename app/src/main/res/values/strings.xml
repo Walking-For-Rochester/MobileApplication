@@ -169,7 +169,8 @@
     <string name="confirm">Confirm</string>
     <string name="back_button">Back Button</string>
     <string name="back_tooltip">Back</string>
-    <string name="open_navigation_drawer">Open Navigation Drawer</string>
+    <string name="menu_tool_tip">Menu</string>
+    <string name="menu_content_description">Open Navigation Drawer</string>
     <string name="open_profile_screen">Open Profile Screen</string>
     <string name="delete_account">Delete account</string>
     <string name="delete_account_msg">Sorry to see you go. By continuing, your account and all walk history will be deleted from Walking For Rochester.</string>

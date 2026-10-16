@@ -38,7 +38,7 @@ fun TopBar(
                 IconButton(onClick = { if (currentScreen.showBackButton) onBackButtonClick() else onNavigationButtonClick() }) {
                     val drawable = if (currentScreen.showBackButton) R.drawable.ic_arrow_back_24dp else R.drawable.ic_menu_24dp
                     val contentDescription =
-                        if (currentScreen.showBackButton) R.string.back_button else R.string.open_navigation_drawer
+                        if (currentScreen.showBackButton) R.string.back_button else R.string.menu_content_description
                     Icon(
                         painter = painterResource(drawable),
                         contentDescription = stringResource(contentDescription)
@@ -85,7 +85,7 @@ fun PreviewTopBarMenu() {
         TopBar(
             currentScreen = Destination(
                 route = "test",
-                title = R.string.open_navigation_drawer,
+                title = R.string.menu_content_description,
                 showBackButton = false,
                 showProfileButton = true
             )
