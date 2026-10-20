@@ -17,22 +17,25 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -48,6 +51,7 @@ import com.walkingforrochester.walkingforrochester.android.formatDouble
 import com.walkingforrochester.walkingforrochester.android.formatElapsedMilli
 import com.walkingforrochester.walkingforrochester.android.model.AccountProfile
 import com.walkingforrochester.walkingforrochester.android.ui.composable.common.CommunityServiceCheckbox
+import com.walkingforrochester.walkingforrochester.android.ui.composable.common.TooltipButton
 import com.walkingforrochester.walkingforrochester.android.ui.composable.common.WFRButton
 import com.walkingforrochester.walkingforrochester.android.ui.composable.common.WFROutlinedButton
 import com.walkingforrochester.walkingforrochester.android.ui.composable.common.WFROutlinedTextField
@@ -382,18 +386,19 @@ fun ProfileActions(
             .fillMaxWidth(),
         horizontalArrangement = Arrangement.End
     ) {
-        IconButton(onClick = onEdit, enabled = enabled) {
-            Icon(
-                painter = painterResource(R.drawable.ic_edit_24dp),
-                contentDescription = stringResource(R.string.edit_profile)
-            )
-        }
-        IconButton(onClick = onShare, enabled = enabled) {
-            Icon(
-                painter = painterResource(R.drawable.ic_share_24dp),
-                contentDescription = stringResource(R.string.share_profile)
-            )
-        }
+        TooltipButton(
+            onClick = onEdit,
+            tooltipLabelResId = R.string.edit_tooltip,
+            iconResId = R.drawable.ic_edit_24dp,
+            contentDescriptionResId = R.string.edit_profile
+        )
+        TooltipButton(
+            onClick = onShare,
+            tooltipLabelResId = R.string.share_tooltip,
+            iconResId = R.drawable.ic_share_24dp,
+            contentDescriptionResId = R.string.share_profile,
+            enabled = enabled
+        )
     }
 }
 
@@ -439,6 +444,9 @@ fun EditProfileInfo(
             .padding(vertical = 8.dp)
             .fillMaxWidth()
     ) {
+        val communityServiceFocusRequester = remember { FocusRequester() }
+        val keyboardController = LocalSoftwareKeyboardController.current
+
         WFROutlinedTextField(
             modifier = Modifier.padding(horizontal = 12.dp),
             value = accountProfile.email,
@@ -461,7 +469,13 @@ fun EditProfileInfo(
             labelRes = R.string.nickname,
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Text,
-                imeAction = ImeAction.Done
+                imeAction = ImeAction.Next
+            ),
+            keyboardActions = KeyboardActions(
+                onNext = {
+                    keyboardController?.hide()
+                    communityServiceFocusRequester.requestFocus()
+                }
             )
         )
         CommunityServiceCheckbox(
@@ -470,6 +484,7 @@ fun EditProfileInfo(
             onCheckedChange = { newValue ->
                 onProfileChange(accountProfile.copy(communityService = newValue))
             },
+            focusRequester = communityServiceFocusRequester
         )
     }
 }

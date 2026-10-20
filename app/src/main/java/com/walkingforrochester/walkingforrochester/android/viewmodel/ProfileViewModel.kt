@@ -8,6 +8,7 @@ import android.util.Patterns
 import androidx.core.net.toUri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.serialization.saved
 import androidx.lifecycle.viewModelScope
 import com.walkingforrochester.walkingforrochester.android.R
 import com.walkingforrochester.walkingforrochester.android.di.IODispatcher
@@ -23,9 +24,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -43,34 +42,29 @@ class ProfileViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val _accountProfile = MutableStateFlow(AccountProfile.DEFAULT_PROFILE)
+    var savedProfile by savedStateHandle.saved(key = PROFILE_KEY) { AccountProfile.DEFAULT_PROFILE }
+    private val _accountProfile = MutableStateFlow(savedProfile)
     val accountProfile = _accountProfile.asStateFlow()
 
     private val _uiState = MutableStateFlow(ProfileScreenState(profileDataLoading = true))
     val uiState = _uiState.asStateFlow()
-
-    // Because the network error may occur BEF
-    private val _eventFlow = MutableSharedFlow<ProfileScreenEvent>(
-        // Using capacity of one to allow exception handler to emit outside of coroutine
-        extraBufferCapacity = 1,
-    )
-    val eventFlow = _eventFlow.asSharedFlow()
 
     private var previousProfile = AccountProfile.DEFAULT_PROFILE
 
     private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
         Timber.e(throwable, "Unexpected error processing profile")
 
-        if (!_eventFlow.tryEmit(ProfileScreenEvent.UnexpectedError)) {
-            Timber.w("Failed to report error due to no listener")
-        }
-
         _uiState.update {
             it.copy(
                 profileDataLoading = false,
-                profileDataSaving = false
+                profileDataSaving = false,
+                event = ProfileScreenEvent.UnexpectedError
             )
         }
+    }
+
+    fun clearEvent() {
+        _uiState.update { it.copy(event = ProfileScreenEvent.None) }
     }
 
     fun loadProfile() = viewModelScope.launch(context = exceptionHandler) {
@@ -126,10 +120,15 @@ class ProfileViewModel @Inject constructor(
                 }
             }
 
-            Timber.d("Updating profile")
-            networkRepository.updateProfile(profile)
-            Timber.d("Refresh profile")
-            refreshProfile()
+            // Only update profile if it changed...
+            if (profile != previousProfile) {
+                Timber.d("Updating profile")
+                networkRepository.updateProfile(profile)
+                Timber.d("Refresh profile")
+                refreshProfile()
+            } else {
+                Timber.d("Profile did not change")
+            }
 
             _uiState.update {
                 it.copy(
@@ -216,7 +215,7 @@ class ProfileViewModel @Inject constructor(
 
     fun onLogout() = viewModelScope.launch(context = exceptionHandler) {
         preferenceRepository.removeAccountInfo()
-        _eventFlow.emit(ProfileScreenEvent.Logout)
+        _uiState.update { it.copy(event = ProfileScreenEvent.Logout) }
     }
 
     fun onDeleteAccount() = viewModelScope.launch(context = exceptionHandler) {
@@ -225,9 +224,8 @@ class ProfileViewModel @Inject constructor(
         networkRepository.deleteUser(accountId = profile.accountId, email = profile.email)
         // If no errors, treat as a logout...
         preferenceRepository.removeAccountInfo()
-        _eventFlow.emit(ProfileScreenEvent.AccountDeleted)
+        _uiState.update { it.copy(event = ProfileScreenEvent.AccountDeleted) }
     }
-
 
     private suspend fun validateForm(): Boolean {
         var isValid = true
@@ -275,9 +273,9 @@ class ProfileViewModel @Inject constructor(
             }
             _accountProfile.update {
                 it.copy(
-                    email = savedStateHandle[EMAIL_KEY] ?: it.email,
-                    nickname = savedStateHandle[NICKNAME_KEY] ?: it.nickname,
-                    communityService = savedStateHandle[COMMUNITY_SERVICE_KEY] ?: it.communityService
+                    email = savedProfile.email,
+                    nickname = savedProfile.nickname,
+                    communityService = savedProfile.communityService
                 )
             }
         }
@@ -285,21 +283,16 @@ class ProfileViewModel @Inject constructor(
 
     private fun updateSavedState() {
         val uiState = _uiState.value
-        val accountProfile = _accountProfile.value
 
+        savedProfile = _accountProfile.value
         savedStateHandle[EDIT_PROFILE_KEY] = uiState.editProfile
-        savedStateHandle[EMAIL_KEY] = accountProfile.email
-        savedStateHandle[NICKNAME_KEY] = accountProfile.nickname
-        savedStateHandle[COMMUNITY_SERVICE_KEY] = accountProfile.communityService
         savedStateHandle[PROFILE_IMAGE_KEY] = uiState.localProfilePicUri
     }
 
     companion object {
         private const val EDIT_PROFILE_KEY = "editProfile"
-        private const val EMAIL_KEY = "email"
-        private const val NICKNAME_KEY = "nickName"
-        private const val COMMUNITY_SERVICE_KEY = "communityService"
         private const val PROFILE_IMAGE_KEY = "profileImage"
+        private const val PROFILE_KEY = "profile"
 
         private const val CHOICE_FILE_NAME = "wfr_profile_choice.jpg"
         private const val CONFIRM_FILE_NAME = "wfr_profile_compress.jpg"

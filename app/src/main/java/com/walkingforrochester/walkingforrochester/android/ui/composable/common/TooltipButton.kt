@@ -22,7 +22,8 @@ fun TooltipButton(
     @StringRes tooltipLabelResId: Int,
     @DrawableRes iconResId: Int,
     @StringRes contentDescriptionResId: Int,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     @OptIn(ExperimentalMaterial3Api::class)
     TooltipBox(
@@ -34,7 +35,8 @@ fun TooltipButton(
     ) {
         IconButton(
             onClick = onClick,
-            modifier = modifier
+            modifier = modifier,
+            enabled = enabled
         ) {
             Icon(
                 painter = painterResource(id = iconResId),

@@ -43,7 +43,9 @@
     <string name="forgot_password_check_email">Check your email for your confirmation code.</string>
     <string name="forgot_password_change">Please provide a new password for your account.</string>
     <string name="profile_pic">Profile Pic</string>
+    <string name="edit_tooltip">Edit</string>
     <string name="edit_profile">Edit Profile</string>
+    <string name="share_tooltip">Share</string>
     <string name="share_profile">Share Profile</string>
     <string name="profile_load_error">Unable to load profile. If the problem persists, please contact support.</string>
     <string name="save">Save</string>

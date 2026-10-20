@@ -14,10 +14,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -26,23 +28,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleStartEffect
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.repeatOnLifecycle
 import com.walkingforrochester.walkingforrochester.android.R
+import com.walkingforrochester.walkingforrochester.android.ktx.isPhoneLandscape
 import com.walkingforrochester.walkingforrochester.android.ktx.safeStartActivity
 import com.walkingforrochester.walkingforrochester.android.model.AccountProfile
 import com.walkingforrochester.walkingforrochester.android.network.GoogleCredentialUtil
-import com.walkingforrochester.walkingforrochester.android.ui.composable.common.LocalSnackbarHostState
+import com.walkingforrochester.walkingforrochester.android.ui.composable.common.NavigationIcon
+import com.walkingforrochester.walkingforrochester.android.ui.composable.common.TooltipButton
 import com.walkingforrochester.walkingforrochester.android.ui.composable.common.WFRButton
 import com.walkingforrochester.walkingforrochester.android.ui.composable.common.WFROutlinedButton
 import com.walkingforrochester.walkingforrochester.android.ui.composable.navigation.ProfileDestination
@@ -50,6 +52,7 @@ import com.walkingforrochester.walkingforrochester.android.ui.state.ProfileScree
 import com.walkingforrochester.walkingforrochester.android.ui.state.ProfileScreenState
 import com.walkingforrochester.walkingforrochester.android.ui.theme.WalkingForRochesterTheme
 import com.walkingforrochester.walkingforrochester.android.viewmodel.ProfileViewModel
+import timber.log.Timber
 
 @Composable
 fun ProfileScreen(
@@ -59,31 +62,8 @@ fun ProfileScreen(
     profileViewModel: ProfileViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
     val resources = LocalResources.current
-    val snackbarHostState = LocalSnackbarHostState.current
-
-    LaunchedEffect(
-        resources,
-        profileViewModel.eventFlow,
-        lifecycleOwner
-    ) {
-        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            profileViewModel.eventFlow.collect { event ->
-                when (event) {
-                    ProfileScreenEvent.Logout,
-                    ProfileScreenEvent.AccountDeleted -> {
-                        GoogleCredentialUtil.performSignOut(context = context)
-                        onLogoutComplete()
-                    }
-
-                    ProfileScreenEvent.UnexpectedError -> {
-                        snackbarHostState.showSnackbar(resources.getString(R.string.unexpected_error))
-                    }
-                }
-            }
-        }
-    }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LifecycleStartEffect(profileViewModel) {
         profileViewModel.loadProfile()
@@ -93,10 +73,30 @@ fun ProfileScreen(
     val uiState by profileViewModel.uiState.collectAsStateWithLifecycle()
     val accountProfile by profileViewModel.accountProfile.collectAsStateWithLifecycle()
 
+    LaunchedEffect(uiState.event) {
+        when (uiState.event) {
+            ProfileScreenEvent.None -> {
+                Timber.d("Viewing Profile")
+            }
+
+            ProfileScreenEvent.Logout,
+            ProfileScreenEvent.AccountDeleted -> {
+                GoogleCredentialUtil.performSignOut(context = context)
+                onLogoutComplete()
+            }
+
+            ProfileScreenEvent.UnexpectedError -> {
+                snackbarHostState.showSnackbar(resources.getString(R.string.unexpected_error))
+                profileViewModel.clearEvent()
+            }
+        }
+    }
+
     ProfileScreenContent(
         uiState = uiState,
         accountProfile = accountProfile,
         modifier = modifier,
+        snackbarHostState = snackbarHostState,
         onNavigateBack = onNavigateBack,
         onEdit = { profileViewModel.onEdit() },
         onShare = { context.safeStartActivity(profileViewModel.onShare(context)) },
@@ -114,6 +114,7 @@ fun ProfileScreenContent(
     uiState: ProfileScreenState,
     accountProfile: AccountProfile,
     modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onNavigateBack: () -> Unit = {},
     onEdit: () -> Unit = {},
     onShare: () -> Unit = {},
@@ -134,15 +135,15 @@ fun ProfileScreenContent(
         )
     }
 
-    val onNavigate: () -> Unit = {
-        when (uiState.editProfile) {
-            true -> onCancelEdits()
-            else -> onNavigateBack()
-        }
-    }
+    val isPhoneLandscape = currentWindowAdaptiveInfoV2().windowSizeClass.isPhoneLandscape()
 
-    BackHandler(true) {
-        onNavigate()
+    @OptIn(ExperimentalMaterial3Api::class)
+    val scrollBehavior =
+        if (isPhoneLandscape) TopAppBarDefaults.enterAlwaysScrollBehavior()
+        else TopAppBarDefaults.pinnedScrollBehavior()
+
+    BackHandler(enabled = uiState.editProfile) {
+        onCancelEdits()
     }
 
     Scaffold(
@@ -152,34 +153,41 @@ fun ProfileScreenContent(
             CenterAlignedTopAppBar(
                 title = { Text(text = stringResource(ProfileDestination.title)) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigate) {
-                        val (iconResId, descriptionResId) = when (uiState.editProfile) {
-                            true -> R.drawable.ic_close_24dp to R.string.cancel
-                            else -> R.drawable.ic_arrow_back_24dp to R.string.back_button
-                        }
-                        Icon(
-                            painter = painterResource(iconResId),
-                            contentDescription = stringResource(descriptionResId)
+                    when (uiState.editProfile) {
+
+                        true -> TooltipButton(
+                            onClick = onCancelEdits,
+                            tooltipLabelResId = R.string.cancel,
+                            iconResId = R.drawable.ic_close_24dp,
+                            contentDescriptionResId = R.string.cancel
                         )
+
+                        false -> NavigationIcon(onClick = onNavigateBack)
                     }
-                }
+                },
+                scrollBehavior = scrollBehavior
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
+        @OptIn(ExperimentalMaterial3Api::class)
         Column(
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = modifier
                 .fillMaxSize()
+                .imePadding()
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .verticalScroll(rememberScrollState())
                 .padding(padding)
-                .imePadding()
         ) {
             Spacer(modifier = Modifier.height(8.dp))
             ProfileCard(
                 uiState = uiState,
                 accountProfile = accountProfile,
-                modifier = Modifier.padding(horizontal = 8.dp),
+                modifier = Modifier
+                    .widthIn(max = dimensionResource(R.dimen.max_form_width))
+                    .padding(horizontal = 8.dp),
                 onEdit = onEdit,
                 onShare = onShare,
                 onProfileChange = onProfileChange,

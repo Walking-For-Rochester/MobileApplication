@@ -9,9 +9,11 @@ data class ProfileScreenState(
     val editProfile: Boolean = false,
     val profileDataLoading: Boolean = false,
     val profileDataSaving: Boolean = false,
+    val event: ProfileScreenEvent = ProfileScreenEvent.None
 )
 
 enum class ProfileScreenEvent {
+    None,
     Logout,
     AccountDeleted,
     UnexpectedError
