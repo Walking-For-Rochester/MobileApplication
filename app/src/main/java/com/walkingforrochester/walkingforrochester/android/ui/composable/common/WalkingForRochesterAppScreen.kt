@@ -21,7 +21,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -115,9 +114,6 @@ fun WFRNavigationDrawer(
         }
     }
 }
-
-val LocalSnackbarHostState =
-    staticCompositionLocalOf<SnackbarHostState> { error("No SnackbarHostState provided") }
 
 @Composable
 fun AppScreen(
