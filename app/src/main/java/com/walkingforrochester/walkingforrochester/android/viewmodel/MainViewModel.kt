@@ -16,6 +16,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
@@ -25,7 +26,7 @@ import javax.inject.Inject
 @HiltViewModel
 class MainViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context,
-    private val preferenceRepository: PreferenceRepository,
+    preferenceRepository: PreferenceRepository,
     @param:IODispatcher private val ioDispatcher: CoroutineDispatcher,
     private val imageLoader: ImageLoader
 ) : ViewModel() {
@@ -40,9 +41,11 @@ class MainViewModel @Inject constructor(
     private var _initialized = false
     val initialized = flow {
         while (!_initialized) {
-            delay(10)
+            delay(timeMillis = 10)
         }
         emit(true)
+    }.onStart {
+        initializeApp()
     }
 
     val uiState = preferenceRepository.userPreferences.map {
@@ -57,11 +60,7 @@ class MainViewModel @Inject constructor(
         initialValue = MainUiState()
     )
 
-    fun onToggleDarkMode(darkMode: Boolean) = viewModelScope.launch {
-        preferenceRepository.updateDarkMode(darkMode)
-    }
-
-    fun initializeApp() = viewModelScope.launch(ioDispatcher) {
+    private fun initializeApp() = viewModelScope.launch(ioDispatcher) {
         val file = File(context.cacheDir, "image_cache")
         if (file.exists() && file.isDirectory) {
             file.deleteRecursively()

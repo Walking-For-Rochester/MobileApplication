@@ -27,7 +27,6 @@ import androidx.core.content.getSystemService
 import com.walkingforrochester.walkingforrochester.android.R
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
-import timber.log.Timber
 
 
 /**
@@ -58,11 +57,9 @@ private fun determineCurrentConnectivityState(
         networkCapabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true
 
     // Verifies a mobile network isn't temporarily disconnected...
-    val notSuspended = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-        networkCapabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED) == true
-    } else {
-        true // Assume true on older platforms
-    }
+    val notSuspended =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.P || // Assume true on older platforms
+            networkCapabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED) == true
 
     return when {
         hasInternet && validated && notSuspended -> ConnectionState.Available

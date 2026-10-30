@@ -25,18 +25,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.repeatOnLifecycle
 import com.facebook.CallbackManager
 import com.walkingforrochester.walkingforrochester.android.service.ForegroundLocationService
 import com.walkingforrochester.walkingforrochester.android.ui.composable.common.ConnectionState
 import com.walkingforrochester.walkingforrochester.android.ui.composable.common.NoConnectionOverlay
-import com.walkingforrochester.walkingforrochester.android.ui.composable.common.WalkingForRochesterAppScreen
 import com.walkingforrochester.walkingforrochester.android.ui.composable.common.observeConnectivityAsFlow
 import com.walkingforrochester.walkingforrochester.android.ui.composable.navigation.HomeRoute
 import com.walkingforrochester.walkingforrochester.android.ui.composable.navigation.LoginRoute
+import com.walkingforrochester.walkingforrochester.android.ui.composable.navigation.RootNavDisplay
 import com.walkingforrochester.walkingforrochester.android.ui.composable.navigation.rememberRootRouteBackStack
 import com.walkingforrochester.walkingforrochester.android.ui.theme.WalkingForRochesterTheme
 import com.walkingforrochester.walkingforrochester.android.viewmodel.MainViewModel
@@ -88,7 +85,6 @@ class MainActivity : ComponentActivity() {
 
             var initialized by remember { mutableStateOf(false) }
             LaunchedEffect(mainViewModel) {
-                mainViewModel.initializeApp()
                 // Wait until state is available to before removing splash screen
                 initialized = mainViewModel.initialized.first()
                 keepSplashScreenOn = false
@@ -98,18 +94,9 @@ class MainActivity : ComponentActivity() {
 
             // Use launched effect so the connectivity observation isn't destroyed
             // via a recompose causing overlay to blink.
-            val owner = LocalLifecycleOwner.current
             val context = LocalContext.current
-            var state by remember { mutableStateOf(ConnectionState.Available) }
-            LaunchedEffect(owner) {
-                owner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                    context.observeConnectivityAsFlow().collect {
-                        if (state != it) {
-                            state = it
-                        }
-                    }
-                }
-            }
+            val state by context.observeConnectivityAsFlow()
+                .collectAsStateWithLifecycle(ConnectionState.Available)
 
             if (initialized) {
                 val darkMode = uiState.darkMode
@@ -133,14 +120,7 @@ class MainActivity : ComponentActivity() {
                                     navigationBarDividerColor = dividerColor
                                 )
                             ) {
-                                /*RootNavDisplay(
-                                    backStack,
-                                    onToggleDarkMode = { mainViewModel.onToggleDarkMode(it) }
-                                )*/
-                                WalkingForRochesterAppScreen(
-                                    onToggleDarkMode = { mainViewModel.onToggleDarkMode(it) },
-                                    uiState = uiState
-                                )
+                                RootNavDisplay(backStack)
                             }
                         }
 
@@ -169,6 +149,11 @@ class MainActivity : ComponentActivity() {
         unbindService(foregroundLocationServiceConnection)
 
         super.onStop()
+    }
+
+    override fun onDestroy() {
+        Timber.d("onDestroy()")
+        super.onDestroy()
     }
 
     private val myBackPressCallback = object : OnBackPressedCallback(
