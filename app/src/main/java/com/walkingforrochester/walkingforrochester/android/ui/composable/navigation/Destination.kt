@@ -128,16 +128,50 @@ val drawerRoutes: List<DrawerRoute> = listOf(
     ContactUsRoute,
 )
 
-/*sealed interface BottomBarRoute : NavKey {
-    @Serializable
-    data object LogAWalkRoute : BottomBarRoute
+@Serializable
+sealed interface BottomBarRoute : NavKey {
+    @get:StringRes
+    val titleRes: Int
 
-    @Serializable
-    data object LeaderboardRoute : BottomBarRoute
+    @get:DrawableRes
+    val iconRes: Int
 
-    @Serializable
-    data object NewsFeedRoute : BottomBarRoute
-}*/
+    @get:DrawableRes
+    val selectedIconRes: Int
+
+
+}
+
+@Serializable
+data object LogAWalkRoute : BottomBarRoute {
+
+    override val titleRes: Int get() = R.string.log_a_walk
+    override val iconRes: Int get() = R.drawable.ic_directions_walk_24dp
+    override val selectedIconRes: Int get() = R.drawable.ic_directions_walk_24dp_semi
+
+}
+
+@Serializable
+data object LeaderboardRoute : BottomBarRoute {
+    override val titleRes: Int get() = R.string.leaderboard
+    override val iconRes: Int get() = R.drawable.ic_bar_chart_24dp
+    override val selectedIconRes: Int get() = R.drawable.ic_bar_chart_24dp_semi
+
+}
+
+@Serializable
+data object NewsFeedRoute : BottomBarRoute {
+    override val titleRes: Int get() = R.string.news_feed
+    override val iconRes: Int get() = R.drawable.ic_newspaper_24dp
+    override val selectedIconRes: Int get() = R.drawable.ic_newspaper_24dp_semi
+
+}
+
+val bottomBarRoutes: List<BottomBarRoute> = listOf(
+    LogAWalkRoute,
+    LeaderboardRoute,
+    NewsFeedRoute
+)
 
 @Composable
 fun rememberRootRouteBackStack(vararg elements: RootRoute): NavBackStack<RootRoute> {
@@ -145,13 +179,6 @@ fun rememberRootRouteBackStack(vararg elements: RootRoute): NavBackStack<RootRou
         NavBackStack(*elements)
     }
 }
-
-/*@Composable
-fun rememberBottomBarRouteBackStack(vararg elements: BottomBarRoute): NavBackStack<BottomBarRoute> {
-    return rememberSerializable(serializer = serializer()) {
-        NavBackStack(*elements)
-    }
-}*/
 
 data class Destination(
     val route: String,
