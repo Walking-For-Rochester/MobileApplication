@@ -33,9 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleStartEffect
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.repeatOnLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.PermissionStatus
@@ -62,36 +60,32 @@ import timber.log.Timber
 fun LogAWalkScreen(
     modifier: Modifier = Modifier,
     onNavigateToSubmitWalk: () -> Unit = {},
-    onLogoutComplete: () -> Unit = {},
     contentPadding: PaddingValues = PaddingValues(),
     logAWalkViewModel: LogAWalkViewModel = hiltViewModel()
 ) {
     val snackbarHostState = LocalSnackbarHostState.current
     val context = LocalContext.current
     val resources = LocalResources.current
-    val lifecycleOwner = LocalLifecycleOwner.current
 
-    LaunchedEffect(
-        resources,
-        logAWalkViewModel.eventFlow,
-        lifecycleOwner
-    ) {
-        Timber.d("Collecting events...")
-        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            logAWalkViewModel.eventFlow.collect { event ->
-                when (event) {
-                    LogAWalkEvent.WalkCompleted -> {
-                        onNavigateToSubmitWalk()
-                    }
+    val walkEvent by logAWalkViewModel.currentEvent.collectAsStateWithLifecycle()
+    LaunchedEffect(walkEvent) {
 
-                    LogAWalkEvent.Logout -> {
-                        onLogoutComplete()
-                    }
+        when (walkEvent) {
+            LogAWalkEvent.NoEvent -> {
+                Timber.d("Show log a walk screen")
+            }
 
-                    LogAWalkEvent.UnexpectedError -> snackbarHostState.showSnackbar(
-                        message = resources.getString(R.string.unexpected_error)
-                    )
-                }
+            LogAWalkEvent.WalkCompleted -> {
+                Timber.d("Walk completed")
+                onNavigateToSubmitWalk()
+            }
+
+            LogAWalkEvent.UnexpectedError -> {
+                snackbarHostState.showSnackbar(
+                    message = resources.getString(R.string.unexpected_error)
+                )
+                // restore prior state after showing error
+                logAWalkViewModel.recoverWalkingState()
             }
         }
     }
@@ -107,8 +101,8 @@ fun LogAWalkScreen(
             Manifest.permission.ACCESS_COARSE_LOCATION,
             Manifest.permission.ACCESS_FINE_LOCATION
         ),
-        onPermissionsResult = {
-            val rejectedPermissions = it.filterNot { it.value }
+        onPermissionsResult = { resultMap ->
+            val rejectedPermissions = resultMap.filterNot { it.value }
 
             if (rejectedPermissions.isEmpty()) {
                 // all granted, so mark rational not shown
@@ -122,7 +116,6 @@ fun LogAWalkScreen(
 
     LifecycleStartEffect(context) {
         Timber.d("started...")
-        logAWalkViewModel.recoverWalkingState()
         locationPermissionState.checkOrRequestPermission(
             rationalShown = permissionPreferences.locationRationalShown,
             onShowRational = { showLocationRational = true },
@@ -131,7 +124,6 @@ fun LogAWalkScreen(
                 showLocationRational = false
             }
         )
-        logAWalkViewModel.validateProfile()
 
         onStopOrDispose {
             when (lifecycle.currentState) {
@@ -154,7 +146,7 @@ fun LogAWalkScreen(
         contentPadding = contentPadding
     )
 
-    // Must be remembered outside of the if show rational block so that the
+    // Must be remembered before the if show rational block so that the
     // dialog can be closed when settings is launched and the result
     // lambda is properly invoked
     val onOpenSettings = rememberOnOpenSettings { result ->
