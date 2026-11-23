@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.util.Patterns
 import androidx.core.net.toUri
+import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.serialization.saved
@@ -30,6 +31,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.io.File
+import java.util.Locale
 import javax.inject.Inject
 
 
@@ -155,7 +157,9 @@ class ProfileViewModel @Inject constructor(
 
     fun onShare(context: Context): Intent {
         with(_accountProfile.value) {
+            val locale = ConfigurationCompat.getLocales(context.resources.configuration)[0] ?: Locale.getDefault()
             val sendIntent: Intent = Intent().apply {
+                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
                 action = Intent.ACTION_SEND
                 type = "image/png"
                 putExtra(
@@ -164,8 +168,8 @@ class ProfileViewModel @Inject constructor(
                 putExtra(
                     Intent.EXTRA_TEXT,
                     "Check out my stats with Walking For Rochester!\nDistance, last walk: ${
-                        distanceToday.formatDouble()
-                    } mi. overall: ${totalDistance.formatDouble()} mi\nDuration, last walk: ${
+                        distanceToday.formatDouble(locale)
+                    } mi. overall: ${totalDistance.formatDouble(locale)} mi\nDuration, last walk: ${
                         durationToday.formatElapsedMilli()
                     }. overall: ${totalDuration.formatElapsedMilli()}"
                 )

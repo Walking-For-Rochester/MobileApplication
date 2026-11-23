@@ -7,7 +7,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.icu.text.NumberFormat
 import androidx.annotation.StringRes
-import androidx.compose.ui.text.intl.Locale
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -21,6 +20,8 @@ import java.security.MessageDigest
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
+import java.util.Locale
+import kotlin.concurrent.getOrSet
 import kotlin.time.Duration.Companion.milliseconds
 
 fun showNotification(
@@ -63,31 +64,28 @@ fun showNotification(
 
 fun Double.metersToMiles(): Double = this / 1609.344
 
-private var LAST_LOCALE = Locale.current
-private var NUMBER_FORMAT = buildNumberFormat(LAST_LOCALE)
-
 private fun buildNumberFormat(locale: Locale): NumberFormat {
-    return NumberFormat.getNumberInstance(locale.platformLocale).apply {
+    return NumberFormat.getNumberInstance(locale).apply {
         minimumFractionDigits = 2
         maximumFractionDigits = 2
     }
 }
 
-fun Double.formatDouble(locale: Locale = Locale.current): String {
-    if (LAST_LOCALE != locale) {
-        LAST_LOCALE = locale
-        NUMBER_FORMAT = buildNumberFormat(LAST_LOCALE)
-    }
-    return NUMBER_FORMAT.format(this)
+private val cache = ThreadLocal<MutableMap<Locale, NumberFormat>>()
+
+fun Double.formatDouble(locale: Locale): String {
+    val map = cache.getOrSet { mutableMapOf() }
+    val formatter = map.getOrPut(locale){ buildNumberFormat(locale) }
+    return formatter.format(this)
 }
 
-fun Double.formatMetersToMiles(locale: Locale = Locale.current): String {
+fun Double.formatMetersToMiles(locale: Locale): String {
     return "${this.metersToMiles().formatDouble(locale)} mi"
 }
 
 private const val twoDigit = "%02d"
 fun Long.formatElapsedMilli(): String {
-    return this.milliseconds.toComponents { hours, minutes, seconds, nanoseconds ->
+    return this.milliseconds.toComponents { hours, minutes, seconds, _ ->
         val minSec = "${twoDigit.format(minutes)}:${twoDigit.format(seconds)}"
         if (hours > 0) {
             "$hours:$minSec"

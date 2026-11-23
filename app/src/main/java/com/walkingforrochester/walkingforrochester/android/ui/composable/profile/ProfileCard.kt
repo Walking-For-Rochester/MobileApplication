@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -117,10 +118,11 @@ fun ProfileCard(
                         modifier = Modifier.padding(horizontal = 16.dp),
                         color = dividerColor
                     )
+                    val locale = LocalLocale.current.platformLocale
                     ProfileStats(
                         label = stringResource(id = R.string.distances),
-                        previousStat = "${accountProfile.distanceToday.formatDouble()} mi",
-                        overallStat = "${accountProfile.totalDistance.formatDouble()} mi"
+                        previousStat = "${accountProfile.distanceToday.formatDouble(locale)} mi",
+                        overallStat = "${accountProfile.totalDistance.formatDouble(locale)} mi"
                     )
                     HorizontalDivider(
                         modifier = Modifier.padding(horizontal = 16.dp),
