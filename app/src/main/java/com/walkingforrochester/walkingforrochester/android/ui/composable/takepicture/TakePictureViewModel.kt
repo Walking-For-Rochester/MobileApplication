@@ -26,9 +26,6 @@ import com.walkingforrochester.walkingforrochester.android.ktx.compressImage
 import com.walkingforrochester.walkingforrochester.android.ktx.mainExecutorCompat
 import com.walkingforrochester.walkingforrochester.android.ktx.takePicture
 import com.walkingforrochester.walkingforrochester.android.repository.WalkRepository
-import com.walkingforrochester.walkingforrochester.android.ui.composable.takepicture.TakePictureEvent.CaptureImage
-import com.walkingforrochester.walkingforrochester.android.ui.composable.takepicture.TakePictureEvent.ConfirmImage
-import com.walkingforrochester.walkingforrochester.android.ui.composable.takepicture.TakePictureEvent.ImageConfirmed
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -75,7 +72,7 @@ class TakePictureViewModel @Inject constructor(
         // Restore state via savedStateHandle
         TakePictureState(
             imageUri = savedStateHandle[IMAGE_URI_KEY] ?: Uri.EMPTY,
-            event = savedStateHandle[EVENT_KEY] ?: CaptureImage
+            mode = savedStateHandle[MODE_KEY] ?: TakePictureMode.CaptureImage
         )
     )
 
@@ -124,8 +121,16 @@ class TakePictureViewModel @Inject constructor(
         unbindUseCases()
     }
 
-    fun captureImage() = viewModelScope.launch {
+    fun captureImage() {
+        if (_takePictureState.value.mode != TakePictureMode.CaptureImage) {
+            Timber.d("Ignore extra capture click if transitioning to confirm")
+            return
+        }
+        _takePictureState.update { it.copy(captureInProgress = true) }
+        takePicture()
+    }
 
+    private fun takePicture() = viewModelScope.launch {
         try {
             val captureFile = File(context.cacheDir, CAPTURE_FILE_NAME)
             val uri = imageCapture.takePicture(
@@ -134,23 +139,28 @@ class TakePictureViewModel @Inject constructor(
             ) ?: Uri.EMPTY
             Timber.d("updateImageFile: %s", uri)
             savedStateHandle[IMAGE_URI_KEY] = uri
-            savedStateHandle[EVENT_KEY] = ConfirmImage
+            savedStateHandle[MODE_KEY] = TakePictureMode.ConfirmImage
             _takePictureState.update {
                 it.copy(
+                    captureInProgress = false,
                     imageUri = uri,
-                    event = ConfirmImage
+                    mode = TakePictureMode.ConfirmImage
                 )
             }
         } catch (e: CancellationException) {
             Timber.d("Capture cancelled")
+            _takePictureState.update { it.copy(captureInProgress = false) }
             throw e
         } catch (e: Exception) {
-            Timber.w(e, "Unexpected exception")
+            Timber.w(e, "Unexpected capture exception")
             savedStateHandle[IMAGE_URI_KEY] = Uri.EMPTY
+            savedStateHandle[MODE_KEY] = TakePictureMode.CaptureImage
             _takePictureState.update {
                 it.copy(
+                    captureInProgress = false,
                     imageUri = Uri.EMPTY,
-                    error = TakePictureError.CaptureError
+                    mode = TakePictureMode.CaptureImage,
+                    event = TakePictureEvent.CaptureError
                 )
             }
         }
@@ -158,11 +168,12 @@ class TakePictureViewModel @Inject constructor(
 
     fun discardImage() {
         savedStateHandle[IMAGE_URI_KEY] = Uri.EMPTY
-        savedStateHandle[EVENT_KEY] = CaptureImage
+        savedStateHandle[MODE_KEY] = TakePictureMode.CaptureImage
         _takePictureState.update {
             it.copy(
+                captureInProgress = false,
                 imageUri = Uri.EMPTY,
-                event = CaptureImage
+                mode = TakePictureMode.CaptureImage
             )
         }
     }
@@ -174,15 +185,14 @@ class TakePictureViewModel @Inject constructor(
         if (compressImage(imageUri, confirmFile)) {
             Timber.d("Image compressed %s", confirmFile.name)
             walkRepository.updateImageUri(confirmFile.toUri())
-            savedStateHandle[EVENT_KEY] = ImageConfirmed
-            _takePictureState.update { it.copy(event = ImageConfirmed) }
+            _takePictureState.update { it.copy(event = TakePictureEvent.ImageConfirmed) }
         } else {
-            _takePictureState.update { it.copy(error = TakePictureError.ConfirmError) }
+            _takePictureState.update { it.copy(event = TakePictureEvent.ConfirmError) }
         }
     }
 
-    fun clearError() {
-        _takePictureState.update { it.copy(error = TakePictureError.None) }
+    fun clearEvent() {
+        _takePictureState.update { it.copy(event = TakePictureEvent.NoEvent) }
     }
 
     fun removeImage() {
@@ -222,6 +232,6 @@ class TakePictureViewModel @Inject constructor(
         const val PHOTO_HEIGHT = 1024
 
         private const val IMAGE_URI_KEY = "imageUri"
-        private const val EVENT_KEY = "event"
+        private const val MODE_KEY = "event"
     }
 }

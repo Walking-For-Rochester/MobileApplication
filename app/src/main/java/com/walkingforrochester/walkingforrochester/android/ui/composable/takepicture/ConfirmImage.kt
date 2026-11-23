@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
@@ -100,12 +101,12 @@ fun ConfirmImage(
                 Spacer(Modifier.weight(1f))
             }
         } else {
-
+            val layoutDirection = LocalLayoutDirection.current
             Column(
                 modifier = Modifier
                     .fillMaxHeight()
                     .padding(end = 24.dp)
-                    .padding(contentPadding)
+                    .padding(contentPadding.calculateRightPadding(layoutDirection))
                     .align(Alignment.CenterEnd)
             ) {
 

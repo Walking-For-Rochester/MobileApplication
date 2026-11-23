@@ -8,11 +8,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.only
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
@@ -34,40 +30,27 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.PreviewScreenSizes
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.window.core.layout.WindowSizeClass
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionStatus
 import com.google.accompanist.permissions.rememberPermissionState
 import com.walkingforrochester.walkingforrochester.android.R
 import com.walkingforrochester.walkingforrochester.android.ktx.isPortraitMode
-import com.walkingforrochester.walkingforrochester.android.ui.composable.takepicture.TakePictureEvent.CaptureImage
-import com.walkingforrochester.walkingforrochester.android.ui.composable.takepicture.TakePictureEvent.ConfirmImage
-import com.walkingforrochester.walkingforrochester.android.ui.composable.takepicture.TakePictureEvent.ImageConfirmed
 import com.walkingforrochester.walkingforrochester.android.ui.theme.WalkingForRochesterTheme
+import timber.log.Timber
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun TakePictureScreen(
-    windowSizeClass: WindowSizeClass,
     modifier: Modifier = Modifier,
     onNavigateBack: () -> Unit = {},
     takePictureViewModel: TakePictureViewModel = hiltViewModel()
 ) {
-    BackHandler(
-        onBack = {
-            takePictureViewModel.removeImage()
-            onNavigateBack()
-        }
-    )
-
     val cameraPermission = rememberPermissionState(Manifest.permission.CAMERA)
-
-    val portraitMode = windowSizeClass.isPortraitMode()
 
     // Ensure camera permission is still granted. If user used
     // one time permission and app was closed too long, we will loose
@@ -78,12 +61,24 @@ fun TakePictureScreen(
 
         val takePictureState by takePictureViewModel.takePictureState.collectAsStateWithLifecycle()
 
+        BackHandler(
+            onBack = {
+                when (takePictureState.mode) {
+                    TakePictureMode.CaptureImage -> {
+                        takePictureViewModel.removeImage()
+                        onNavigateBack()
+                    }
+
+                    TakePictureMode.ConfirmImage -> takePictureViewModel.discardImage()
+                }
+            }
+        )
+
         MonitorOrientation(
             onOrientationChanged = { takePictureViewModel.updateOrientation(it) }
         )
 
         TakePictureContent(
-            portraitMode = portraitMode,
             takePictureState = takePictureState,
             modifier = modifier,
             onNavigateBack = onNavigateBack,
@@ -92,7 +87,7 @@ fun TakePictureScreen(
             onCaptureImage = { takePictureViewModel.captureImage() },
             onDiscardImage = { takePictureViewModel.discardImage() },
             onConfirmImage = { takePictureViewModel.confirmImage() },
-            onClearError = { takePictureViewModel.clearError() }
+            onClearEvent = { takePictureViewModel.clearEvent() }
         )
     } else {
         takePictureViewModel.removeImage()
@@ -130,7 +125,6 @@ fun MonitorOrientation(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TakePictureContent(
-    portraitMode: Boolean,
     takePictureState: TakePictureState,
     modifier: Modifier = Modifier,
     onNavigateBack: () -> Unit = {},
@@ -139,22 +133,35 @@ fun TakePictureContent(
     onCaptureImage: () -> Unit = {},
     onDiscardImage: () -> Unit = {},
     onConfirmImage: () -> Unit = {},
-    onClearError: () -> Unit = {},
+    onClearEvent: () -> Unit = {},
 ) {
+    val windowSizeClass = currentWindowAdaptiveInfoV2().windowSizeClass
+    val portraitMode = windowSizeClass.isPortraitMode()
+
     val snackBarHostState = remember { SnackbarHostState() }
 
     val resources = LocalResources.current
 
-    LaunchedEffect(takePictureState.error) {
-        val errorMsg = when (takePictureState.error) {
-            TakePictureError.None -> ""
-            TakePictureError.CaptureError -> resources.getString(R.string.capture_error)
-            TakePictureError.ConfirmError -> resources.getString(R.string.confirm_error)
-        }
+    LaunchedEffect(takePictureState.event) {
+        when (takePictureState.event) {
+            TakePictureEvent.NoEvent -> {
+                Timber.d("No active event")
+            }
 
-        if (errorMsg.isNotEmpty()) {
-            snackBarHostState.showSnackbar(errorMsg)
-            onClearError()
+            TakePictureEvent.CaptureError -> {
+                snackBarHostState.showSnackbar(resources.getString(R.string.capture_error))
+                onClearEvent()
+            }
+
+            TakePictureEvent.ConfirmError -> {
+                snackBarHostState.showSnackbar(resources.getString(R.string.confirm_error))
+                onClearEvent()
+            }
+
+            TakePictureEvent.ImageConfirmed -> {
+                Timber.d("Image confirmed")
+                onNavigateBack()
+            }
         }
     }
 
@@ -165,7 +172,7 @@ fun TakePictureContent(
                 navigationIcon = {
                     FilledIconButton(
                         onClick = {
-                            if (takePictureState.event == ConfirmImage) {
+                            if (takePictureState.mode == TakePictureMode.ConfirmImage) {
                                 onDiscardImage()
                             } else {
                                 onNavigateBack()
@@ -182,57 +189,70 @@ fun TakePictureContent(
                         )
                     }
                 },
-                windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent
+                )
             )
         },
         snackbarHost = { SnackbarHost(snackBarHostState) }
     ) { contentPadding ->
 
-        when (takePictureState.event) {
-            ImageConfirmed -> onNavigateBack()
-            else -> {
-                AnimatedContent(
-                    targetState = takePictureState.event,
-                    transitionSpec = {
-                        fadeIn(animationSpec = tween(220))
-                            .togetherWith(fadeOut(animationSpec = tween(90)))
-                    }
-                ) {
-                    if (it == CaptureImage) {
-                        CaptureImage(
-                            portraitMode = portraitMode,
-                            modifier = modifier.fillMaxSize(),
-                            surfaceRequest = takePictureState.surfaceRequest,
-                            onBindUseCases = onBindUseCases,
-                            onUnbindUseCases = onUnbindUseCases,
-                            onCaptureImage = onCaptureImage
-                        )
-                    } else {
-                        ConfirmImage(
-                            imageUri = takePictureState.imageUri,
-                            portraitMode = portraitMode,
-                            modifier = modifier.fillMaxSize(),
-                            onConfirmImage = onConfirmImage,
-                            onDiscardImage = onDiscardImage,
-                            contentPadding = contentPadding
-                        )
-                    }
+        AnimatedContent(
+            targetState = takePictureState.mode,
+            transitionSpec = {
+                fadeIn(animationSpec = tween(220))
+                    .togetherWith(fadeOut(animationSpec = tween(90)))
+            }
+        ) {
+            when (it) {
+
+                TakePictureMode.CaptureImage -> {
+                    CaptureImage(
+                        portraitMode = portraitMode,
+                        modifier = modifier.fillMaxSize(),
+                        captureInProgress = takePictureState.captureInProgress,
+                        surfaceRequest = takePictureState.surfaceRequest,
+                        onBindUseCases = onBindUseCases,
+                        onUnbindUseCases = onUnbindUseCases,
+                        onCaptureImage = onCaptureImage,
+                        contentPadding = contentPadding
+                    )
+                }
+
+                TakePictureMode.ConfirmImage -> {
+                    ConfirmImage(
+                        imageUri = takePictureState.imageUri,
+                        portraitMode = portraitMode,
+                        modifier = modifier.fillMaxSize(),
+                        onConfirmImage = onConfirmImage,
+                        onDiscardImage = onDiscardImage,
+                        contentPadding = contentPadding
+                    )
                 }
             }
         }
     }
 }
 
-@PreviewScreenSizes
+@Preview
 @Composable
-fun PreviewTakePicture() {
+fun PreviewTakePictureCapture() {
     WalkingForRochesterTheme {
         Surface {
-            val portraitMode = currentWindowAdaptiveInfoV2().windowSizeClass.isPortraitMode()
             TakePictureContent(
-                portraitMode = portraitMode,
                 takePictureState = TakePictureState()
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+fun PreviewTakePictureConfirm() {
+    WalkingForRochesterTheme {
+        Surface {
+            TakePictureContent(
+                takePictureState = TakePictureState(mode = TakePictureMode.ConfirmImage)
             )
         }
     }

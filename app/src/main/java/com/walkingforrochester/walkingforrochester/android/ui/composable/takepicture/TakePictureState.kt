@@ -4,16 +4,17 @@ import android.net.Uri
 import androidx.camera.core.SurfaceRequest
 
 data class TakePictureState(
-    val event: TakePictureEvent = TakePictureEvent.CaptureImage,
+    val mode: TakePictureMode = TakePictureMode.CaptureImage,
+    val captureInProgress: Boolean = false,
     val imageUri: Uri = Uri.EMPTY,
     val surfaceRequest: SurfaceRequest? = null,
-    val error: TakePictureError = TakePictureError.None
+    val event: TakePictureEvent = TakePictureEvent.NoEvent
 )
 
-enum class TakePictureEvent {
-    CaptureImage, ConfirmImage, ImageConfirmed
+enum class TakePictureMode {
+    CaptureImage, ConfirmImage
 }
 
-enum class TakePictureError {
-    None, CaptureError, ConfirmError
+enum class TakePictureEvent {
+    NoEvent, CaptureError, ConfirmError, ImageConfirmed
 }
